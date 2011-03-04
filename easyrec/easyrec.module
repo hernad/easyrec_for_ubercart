@@ -1,0 +1,313 @@
+<?php
+// $Id: easyrec.module,v 0.95 2010/10/09 21:46:12 hass Exp $
+
+/*
+ * @file
+ * Drupal Module: easyrec
+ * Adds the required Javascript to the bottom of all your Drupal pages
+ * to allow tracking by the easyrec package.
+ *
+ * @author: David Mann <http://drupal.org/user/CCC>
+ */
+
+function easyrec_help($path, $arg) {
+  switch ($path) {
+    case 'admin/settings/easyrec':
+      return t('<a href="@easyrec_url">easyrec</a> is a free (registration required) recommender service. Configure the required parameters to get started.', array('@easyrec_url' => 'http://easyrec.org/'));
+  }
+}
+
+function easyrec_perm() {
+  return array('administer easyrec');
+}
+
+function easyrec_menu() {
+  $items['admin/settings/easyrec'] = array(
+    'title' => 'easyrec',
+    'description' => 'Configure easyrec settings.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('easyrec_admin_settings_form'),
+    'access arguments' => array('administer easyrec'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'easyrec.admin.inc',
+  );
+
+  return $items;
+}
+
+function easyrec_init() {
+  global $user;
+  $apiKey = variable_get('easyrec_apiKey', '');  
+  if (!empty($apiKey)) {  
+    $script = 'var apiKey      = "' .  $apiKey  . '";';
+    $script .= 'var tenantId    = "' .  variable_get('easyrec_tenantId', '')  . '";';
+    $script .= 'var easyrecApiUrl= "' .  variable_get('easyrec_url', '')  . 'api/1.0/json/";';
+
+
+    if (arg(0)=='node' && is_numeric(arg(1))) {
+        $node =  node_load(arg(1)); 
+        if ($node->type == 'product') {
+            $userId = "null";
+            if ($user->uid != 0) {
+                $userId = "'" . $user->uid . "'";
+            }
+
+            $path = isset($_GET['q']) ? $_GET['q'] : '<front>';
+            $link = url($path, array('absolute' => TRUE));
+
+            $imagePath = "";
+            if ($node->uc_product_image['und'][0]['filename'] != "") {
+                $imagePath = "/sites/default/files/" . $node->uc_product_image['und'][0]['filename'];
+            }
+
+            $script .= 'easyrec_sendAction("view",{userId:' . $userId . ','.
+                                     'itemId:"' . $node->nid . '",'.
+                                     'itemUrl:"' . $link . '",'.
+                                     'itemDescription:"' . $node->title . '",'.
+                                     'itemImageUrl:"' . $imagePath . '"});';
+        }
+    }
+
+
+
+     if (_easyrec_display()) { 
+        // If so, then if we can load the order...
+        if (!empty($_SESSION['easyrec_order_id']) && $order = uc_order_load($_SESSION['easyrec_order_id'])) {
+          $script .= _easyrec_create_buy_actions($order);
+       
+        }
+        // Clean out the session variable.
+        unset($_SESSION['easyrec_order_id']);
+    }
+
+    $script .= variable_get('easyrec_drawDrupalCustom', ''); 
+    drupal_add_js($script, 'inline', 'header');
+    drupal_add_js(drupal_get_path('module', 'easyrec')  . '/easyrec.js', 'file',  'header'); 
+  }
+}
+
+/**
+* Implements hook_block().
+*/
+function easyrec_block($op = 'list', $delta = 0, $edit = array()) {
+switch ($op) {
+    case 'list':
+      return easyrec_block_info();
+    case 'configure':
+      return easyrec_block_configure($delta);
+    case 'save':
+      return easyrec_block_save($delta, $edit);
+    case 'view':
+         return easyrec_block_view($delta);
+  }
+
+}
+
+
+
+/**
+ * Implements hook_block_info().
+ */
+function easyrec_block_info() {
+  $blocks['otherUsersAlsoViewed']['info'] = t('easyrec: other users also viewed');  
+  $blocks['otherUsersAlsoBought']['info'] = t('easyrec: other users also bought');    
+  $blocks['recommendationsForUser']['info'] = t('easyrec: recommendations for user');    
+
+  $blocks['mostViewedItems']['info'] = t('easyrec: most viewed items');    
+  $blocks['mostBoughtItems']['info'] = t('easyrec: most bought items');  
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_configure().
+ */
+function easyrec_block_configure($delta = '') {
+
+    $form['blockconfig'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('easyerec block settings:' . $delta),    
+        '#description' => t('Here you can change block specific settings')
+      );
+
+    $form['blockconfig']['easyrec_block_' . $delta . '_drawingCallback'] = array(
+        '#type' => 'select',
+        '#title' => t('Drawing Callback'),
+        '#default_value' => variable_get('easyrec_block_' . $delta . '_drawingCallback', 'drawRecommendationCarusel'),
+        '#options' => drupal_map_assoc(array('drawRecommendationList', 'drawRecommendationListWithPictures', 'drawRecommendationCarusel', 'drawDrupalCustom')),        
+        '#description' => t('Select which javascript method should render the JSON request. You can define the "drawDrupalCustom" in <a href="@settings">the settings</a>.', array('@settings' => '/admin/config/system/easyrec'))
+      );      
+
+    if ( $delta=="otherUsersAlsoViewed" ||
+        $delta=="otherUsersAlsoBought" ) {
+            
+        $form['blockconfig']['easyrec_block_' . $delta . '_filterUser'] = array(
+            '#type' => 'checkbox',
+            '#title' => t('filter items user already knows'),
+            '#default_value' => variable_get('easyrec_block_' . $delta . '_filterUser', ''),
+             '#description' => 'When checked easyrec will never recommend items which the user already knows.',
+          );        
+    } 
+    else {
+        $form['blockconfig']['easyrec_block_' . $delta . '_numberOfResults'] = array(
+            '#type' => 'textfield',
+            '#title' => t('numberOfResults'),
+            '#default_value' => variable_get('easyrec_block_' . $delta . '_numberOfResults', '10'),
+            '#size' => 45,
+            '#maxlength' => 45,      
+             '#description' => 'An parameter to determine the number of results returned.',
+          );    
+
+        $form['blockconfig']['easyrec_block_' . $delta . '_timeRange'] = array(
+            '#type' => 'select',
+            '#title' => t('timeRange'),
+            '#default_value' => variable_get('easyrec_block_' . $delta . '_timeRange', 'ALL'),
+            '#options' => drupal_map_assoc(array('ALL', 'MONTH', 'WEEK', 'DAY')),        
+             '#description' => 'An parameter to determine the time range.',
+          );    
+
+    }
+
+   return $form;
+
+}
+
+/**
+ * Implements hook_block_save().
+ */
+function easyrec_block_save($delta = '', $edit = array()) {
+    variable_set('easyrec_block_' . $delta . '_drawingCallback', $edit['easyrec_block_' . $delta . '_drawingCallback']);       
+    
+    if ( $delta=="otherUsersAlsoViewed" ||
+        $delta=="otherUsersAlsoBought" ) {
+        variable_set('easyrec_block_' . $delta . '_filterUser', $edit['easyrec_block_' . $delta . '_filterUser']);
+    }
+    else{
+        variable_set('easyrec_block_' . $delta . '_numberOfResults', $edit['easyrec_block_' . $delta . '_numberOfResults']);
+        variable_set('easyrec_block_' . $delta . '_timeRange', $edit['easyrec_block_' . $delta . '_timeRange']);
+    }
+
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function easyrec_block_view($delta = '') {
+     global $user;
+    $drawingCallbackFunction = variable_get('easyrec_block_' . $delta . '_drawingCallback', 'drawRecommendationCarusel');
+
+    if ( $delta=="otherUsersAlsoViewed" ||
+        $delta=="otherUsersAlsoBought" ||
+        $delta=="recommendationsForUser" ) {
+    
+            if (arg(0)=='node' && is_numeric(arg(1))) {
+                $node =  node_load(arg(1)); 
+
+                if ($node->type == 'product' || $delta=="recommendationsForUser") {
+                    
+                    
+                    $userId = "null";
+                    if (variable_get('easyrec_block_' . $delta . '_filterUser', '')==1 && $user->uid!=0) {
+                        $userId = "'" . $user->uid . "'";
+                    }
+            
+                    $blockContent = "<div id='recommender_" . $delta . "'> </div>";
+                    $blockContent .= "<script>";
+                    $blockContent .=  _easyrec_generate_unique_callback($drawingCallbackFunction, $delta);
+                    $blockContent .= "easyrec_getRecommendations('" . strtolower($delta) . "',{userId:" . $userId . "," . 
+                                                       "itemId:'" . $node->nid . "'," . 
+                                                      " drawingCallback:'easyrec_" . $drawingCallbackFunction . "_" . $delta . "'});";
+                    $blockContent .= "</script>";
+                      $block = array();
+                      $block['subject'] = t('Recommendations');  
+                    $block['content'] = $blockContent;
+                
+                    return $block;    
+                }
+        }
+    }
+    else{ // Community Rankings
+            $blockContent = "<div id='recommender_" . $delta . "'> </div>";
+            $blockContent .= "<script>";
+            $blockContent .=  _easyrec_generate_unique_callback($drawingCallbackFunction, $delta);
+            $blockContent .= "easyrec_getRankings('" . strtolower($delta) . "',{numberOfResults:" . variable_get('easyrec_block_' . $delta . '_numberOfResults', '10') . "," . 
+                                               "timeRange:'" . variable_get('easyrec_block_' . $delta . '_timeRange', 'ALL') . "'," . 
+                                              " drawingCallback:'easyrec_" . $drawingCallbackFunction . "_" . $delta . "'});";
+            $blockContent .= "</script>";
+              $block = array();
+              $block['subject'] = t('Recommendations');  
+            $block['content'] = $blockContent;
+        
+            return $block;
+
+    }
+}
+
+/**
+ * Implement hook_uc_order().
+ */
+function easyrec_uc_order($op, &$order, $arg2) {
+  // If a new order is created during the checkout process...
+  if ($op == 'new' && arg(0) == 'cart') {
+    // Store the order ID for later use.
+    $_SESSION['easyrec_order_id'] = $order->order_id;
+  }
+}
+
+
+/**
+ * Determine whether or not to send buy actions to the easyrec service
+ *
+ * @return
+ *   TRUE or FALSE indicating whether or not to display the easyrec JS.
+ */
+function _easyrec_display() {
+  // Display the easyrec JS if the URL is complete...
+  if (arg(2) == 'complete') {
+    return TRUE;
+  }
+
+  // Or if the URL is the custom completion page.
+  $completion_page = variable_get('uc_cart_checkout_complete_page', '');
+
+  if (!empty($completion_page) && $completion_page == $_GET['q']) {
+    return TRUE;
+  }
+
+  // Otherwise return FALSE.
+  return FALSE;
+}
+
+/**
+ * Create a unique Callback alias function for Easyrec
+ *
+ * @return
+ *   String containing a Drawback alias
+ */
+function _easyrec_generate_unique_callback($drawingCallbackFunction, $delta) {
+    $returnString = "function easyrec_" . $drawingCallbackFunction . "_" . $delta . "(json){" . 
+                            "if(json.recommendeditems!=null){".
+                                  $drawingCallbackFunction . "ToDiv(json,'recommender_" . $delta . "');" .   
+                            "}else{" . 
+                                "document.getElementById('block-easyrec-" . $delta . "').style.display='none';" . 
+                            "}" . 
+                    "}";
+
+    return $returnString;
+}
+
+
+function _easyrec_create_buy_actions($order) {
+  $script = '';
+  foreach ($order->products as $product) {    
+        for ($i = 1; $i <= $product->qty; $i++) {
+            $script .= 'easyrec_sendAction("buy",{userId:' . $order->uid . ',' . 
+                                     'itemId:"' . $product->nid . '",' . 
+                                     'itemDescription:"' . $product->title . '",' .                                      
+                                     'itemUrl:"",' . 
+                                     'itemImageUrl:""});';                                     
+        }
+  }  
+
+  return $script;
+}
