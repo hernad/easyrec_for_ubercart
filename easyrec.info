@@ -1,0 +1,12 @@
+name = "easyrec for ubercart"
+description = Allows your site to display recommendations.
+core = 7.x
+package = Recommendation
+configure = admin/config/system/easyrec
+dependencies[] = uc_order
+
+files[] = easyrec.module
+files[] = easyrec.admin.inc
+files[] = easyrec.install
+
+version = 7.x-1.0
