@@ -10,24 +10,33 @@
  * @author: David Mann <http://drupal.org/user/CCC>
  */
 
+/**
+ * Implements hook_help().
+ */
 function easyrec_help($path, $arg) {
     switch ($path) {
-        case 'admin/config/system/easyrec':
+        case 'admin/config/services/easyrec':
             return t('<a href="@easyrec_url">easyrec</a> is a free (registration required) recommender service. Configure the required parameters to get started.', array('@easyrec_url' => 'http://easyrec.org/'));
     }
 }
 
-function easyrec_permission() {
+/**
+ * Implements hook_perm().
+ */
+function easyrec_perm() {
     return array(
-        'administer  easyrec' => array(
+        'administer easyrec' => array(
             'title' => t('Administer easyrec'),
             'description' => t('Perform maintenance tasks for easyrec.'),
         ),
     );
 }
 
+/**
+ * Implements hook_menu().
+ */
 function easyrec_menu() {
-    $items['admin/config/system/easyrec'] = array(
+    $items['admin/config/services/easyrec'] = array(
         'title' => 'easyrec',
         'description' => 'Configure easyrec settings.',
         'page callback' => 'drupal_get_form',
@@ -41,7 +50,7 @@ function easyrec_menu() {
 }
 
 /**
- * Implementation of hook_page_alter() to insert JavaScript to the appropriate scope/region of the page.
+ * Implements hook_page_alter(). to insert JavaScript to the appropriate scope/region of the page.
  */
 function easyrec_page_alter(&$page) {
     global $user;
@@ -54,7 +63,7 @@ function easyrec_page_alter(&$page) {
 
         if (arg(0) == 'node' && is_numeric(arg(1))) {
             $node = node_load(arg(1));
-            if ($node->type == 'product') {
+            if (in_array($node->type, array_keys(uc_product_node_info()))) {
                 $userId = "null";
                 if ($user->uid != 0) {
                     $userId = "'" . $user->uid . "'";
@@ -102,12 +111,17 @@ function easyrec_page_alter(&$page) {
  * Implements hook_block_info().
  */
 function easyrec_block_info() {
-    $blocks['otherUsersAlsoViewed']['info'] = t('easyrec: other users also viewed');
-    $blocks['otherUsersAlsoBought']['info'] = t('easyrec: other users also bought');
-    $blocks['recommendationsForUser']['info'] = t('easyrec: recommendations for user');
+    $blocks['otherUsersAlsoViewed'] = array('info' => t('easyrec: other users also viewed'),
+                                            'cache' => DRUPAL_NO_CACHE);
+    $blocks['otherUsersAlsoBought'] = array('info' => t('easyrec: other users also bought'),
+                                            'cache' => DRUPAL_NO_CACHE);
+    $blocks['recommendationsForUser'] = array('info' => t('easyrec: recommendations for user'),
+                                              'cache' => DRUPAL_NO_CACHE);
 
-    $blocks['mostViewedItems']['info'] = t('easyrec: most viewed items');
-    $blocks['mostBoughtItems']['info'] = t('easyrec: most bought items');
+    $blocks['mostViewedItems']['info'] = array('info' => t('easyrec: most viewed items'),
+                                               'cache' => DRUPAL_NO_CACHE);
+    $blocks['mostBoughtItems']['info'] = array('info' => t('easyrec: most bought items'),
+                                               'cache' => DRUPAL_NO_CACHE);
 
     return $blocks;
 }
@@ -128,7 +142,7 @@ function easyrec_block_configure($delta = '') {
         '#title' => t('Drawing Callback'),
         '#default_value' => variable_get('easyrec_block_' . $delta . '_drawingCallback', 'drawRecommendationCarusel'),
         '#options' => drupal_map_assoc(array('drawRecommendationList', 'drawRecommendationListWithPictures', 'drawRecommendationCarusel', 'drawDrupalCustom')),
-        '#description' => t('Select which javascript method should render the JSON request. You can define the "drawDrupalCustom" in <a href="@settings">the settings</a>.', array('@settings' => '/admin/config/system/easyrec'))
+        '#description' => t('Select which javascript method should render the JSON request. You can define the "drawDrupalCustom" in <a href="@settings">the settings</a>.', array('@settings' => '/admin/config/services/easyrec'))
     );
 
     if ($delta == "otherUsersAlsoViewed" ||
@@ -149,7 +163,7 @@ function easyrec_block_configure($delta = '') {
             '#default_value' => variable_get('easyrec_block_' . $delta . '_numberOfResults', '10'),
             '#size' => 45,
             '#maxlength' => 45,
-            '#description' => 'An parameter to determine the number of results returned.',
+            '#description' => t('A parameter to determine the number of results returned.'),
         );
 
         $form['blockconfig']['easyrec_block_' . $delta . '_timeRange'] = array(
@@ -157,7 +171,7 @@ function easyrec_block_configure($delta = '') {
             '#title' => t('timeRange'),
             '#default_value' => variable_get('easyrec_block_' . $delta . '_timeRange', 'ALL'),
             '#options' => drupal_map_assoc(array('ALL', 'MONTH', 'WEEK', 'DAY')),
-            '#description' => 'An parameter to determine the time range.',
+            '#description' => t('A parameter to determine the time range.'),
         );
 
     }
@@ -195,7 +209,7 @@ function easyrec_block_view($delta = '') {
         $delta == "recommendationsForUser") {
 
         if (arg(0) == 'node' && is_numeric(arg(1))) {
-            $node = node_load(arg(1));
+            $node = menu_get_object();
 
             if ($node->type == 'product' || $delta == "recommendationsForUser") {
 
@@ -240,7 +254,7 @@ function easyrec_block_view($delta = '') {
 }
 
 /**
- * Implement hook_uc_order().
+ * Implements hook_uc_order().
  */
 function easyrec_uc_order($op, &$order, $arg2) {
     // If a new order is created during the checkout process...
@@ -277,8 +291,7 @@ function _easyrec_display() {
 /**
  * Create a unique Callback alias function for Easyrec
  *
- * @return
- *   String containing a Drawback alias
+ * @return  String containing a Drawback alias
  */
 function _easyrec_generate_unique_callback($drawingCallbackFunction, $delta) {
     $returnString = "function easyrec_" . $drawingCallbackFunction . "_" . $delta . "(json){" .
@@ -292,7 +305,12 @@ function _easyrec_generate_unique_callback($drawingCallbackFunction, $delta) {
     return $returnString;
 }
 
-
+/**
+ * This function returns a Javascript string which sends a buy action to
+ * the easyrec server.
+ * @param  $order  the order object to get the product information
+ * @return string  the easyrec javascript
+ */
 function _easyrec_create_buy_actions($order) {
     $script = '';
     foreach ($order->products as $product) {

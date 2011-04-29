@@ -97,9 +97,7 @@ function easyrec_admin_settings_form($form_state) {
 
 function easyrec_admin_settings_form_validate($form, &$form_state) {
     // Trim some text values.
-    $form_state['values']['easyrec_tenantId'] = trim($form_state['values']['easyrec_tenantId']);
-    $form_state['values']['easyrec_apiKey'] = trim($form_state['values']['easyrec_apiKey']);
-    $form_state['values']['easyrec_url'] = trim($form_state['values']['easyrec_url']);
-    $form_state['values']['easyrec_drawDrupalCustom'] = trim($form_state['values']['easyrec_drawDrupalCustom']);
-
+    form_set_value($form['account']['easyrec_apiKey'], trim($form_state['values']['easyrec_apiKey']), $form_state);
+    form_set_value($form['account']['easyrec_tenantId'], trim($form_state['values']['easyrec_tenantId']), $form_state);
+    form_set_value($form['account']['easyrec_url'], trim($form_state['values']['easyrec_url']), $form_state);
 }
