@@ -21,13 +21,14 @@ function easyrec_help($path, $arg) {
 }
 
 /**
- * Implements hook_perm().
+ * Implements hook_permission().
  */
-function easyrec_perm() {
+function easyrec_permission() {
     return array(
         'administer easyrec' => array(
             'title' => t('Administer easyrec'),
             'description' => t('Perform maintenance tasks for easyrec.'),
+            'restrict access' => true
         ),
     );
 }
