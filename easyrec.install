@@ -6,10 +6,17 @@
  * Installation file for easyrec module.
  */
 
+
+/**
+ * Implements hook_install().
+ */
 function easyrec_install() {
     variable_set('easyrec_url', 'http://demo.easyrec.org:8080/');
 }
 
+/**
+ * Implements hook_uninstall().
+ */
 function easyrec_uninstall() {
     variable_del('easyrec_tenantId');
     variable_del('easyrec_apiKey');

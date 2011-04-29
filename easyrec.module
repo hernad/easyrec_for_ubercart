@@ -21,13 +21,14 @@ function easyrec_help($path, $arg) {
 }
 
 /**
- * Implements hook_perm().
+ * Implements hook_permission().
  */
-function easyrec_perm() {
+function easyrec_permission() {
     return array(
         'administer easyrec' => array(
             'title' => t('Administer easyrec'),
             'description' => t('Perform maintenance tasks for easyrec.'),
+            'restrict access' => true
         ),
     );
 }
@@ -61,9 +62,9 @@ function easyrec_page_alter(&$page) {
         $script .= 'var tenantId    = "' . variable_get('easyrec_tenantId', '') . '";';
 
 
-        if (arg(0) == 'node' && is_numeric(arg(1))) {
-            $node = node_load(arg(1));
-            if (in_array($node->type, array_keys(uc_product_node_info()))) {
+        if ($node = menu_get_object()) {
+
+            if (uc_product_is_product($node)) {
                 $userId = "null";
                 if ($user->uid != 0) {
                     $userId = "'" . $user->uid . "'";
@@ -111,17 +112,30 @@ function easyrec_page_alter(&$page) {
  * Implements hook_block_info().
  */
 function easyrec_block_info() {
-    $blocks['otherUsersAlsoViewed'] = array('info' => t('easyrec: other users also viewed'),
-                                            'cache' => DRUPAL_NO_CACHE);
-    $blocks['otherUsersAlsoBought'] = array('info' => t('easyrec: other users also bought'),
-                                            'cache' => DRUPAL_NO_CACHE);
-    $blocks['recommendationsForUser'] = array('info' => t('easyrec: recommendations for user'),
-                                              'cache' => DRUPAL_NO_CACHE);
+    $blocks['otherUsersAlsoViewed'] = array(
+        'info' => t('easyrec: other users also viewed'),
+        'cache' => DRUPAL_NO_CACHE
+    );
 
-    $blocks['mostViewedItems']['info'] = array('info' => t('easyrec: most viewed items'),
-                                               'cache' => DRUPAL_NO_CACHE);
-    $blocks['mostBoughtItems']['info'] = array('info' => t('easyrec: most bought items'),
-                                               'cache' => DRUPAL_NO_CACHE);
+    $blocks['otherUsersAlsoBought'] = array(
+        'info' => t('easyrec: other users also bought'),
+        'cache' => DRUPAL_NO_CACHE
+    );
+
+    $blocks['recommendationsForUser'] = array(
+        'info' => t('easyrec: recommendations for user'),
+        'cache' => DRUPAL_NO_CACHE
+    );
+
+    $blocks['mostViewedItems']['info'] = array(
+        'info' => t('easyrec: most viewed items'),
+        'cache' => DRUPAL_NO_CACHE
+    );
+
+    $blocks['mostBoughtItems']['info'] = array(
+        'info' => t('easyrec: most bought items'),
+        'cache' => DRUPAL_NO_CACHE
+    );
 
     return $blocks;
 }
@@ -208,10 +222,9 @@ function easyrec_block_view($delta = '') {
         $delta == "otherUsersAlsoBought" ||
         $delta == "recommendationsForUser") {
 
-        if (arg(0) == 'node' && is_numeric(arg(1))) {
-            $node = menu_get_object();
+        if ($node = menu_get_object()) {
 
-            if ($node->type == 'product' || $delta == "recommendationsForUser") {
+            if (uc_product_is_product($node) || $delta == "recommendationsForUser") {
 
 
                 $userId = "null";
@@ -291,7 +304,8 @@ function _easyrec_display() {
 /**
  * Create a unique Callback alias function for Easyrec
  *
- * @return  String containing a Drawback alias
+ * @return
+ *   String containing a Drawback alias.
  */
 function _easyrec_generate_unique_callback($drawingCallbackFunction, $delta) {
     $returnString = "function easyrec_" . $drawingCallbackFunction . "_" . $delta . "(json){" .
@@ -308,8 +322,10 @@ function _easyrec_generate_unique_callback($drawingCallbackFunction, $delta) {
 /**
  * This function returns a Javascript string which sends a buy action to
  * the easyrec server.
- * @param  $order  the order object to get the product information
- * @return string  the easyrec javascript
+ * @param  $order
+ *   the order object to get the product information.
+ * @return
+ *   the easyrec javascript which sends a buy action.
  */
 function _easyrec_create_buy_actions($order) {
     $script = '';

@@ -5,10 +5,13 @@
  */
 
 /**
- * Implementation of hook_admin_settings() for configuring the module
+ * Configure easyrec settings like tenantId and ApiKey this should
+ * only be assessable for the admin since you only need to config your
+ * easyrec once.
+ *
+ * @see
+ *   system_settings_form()
  */
-
-
 function easyrec_admin_settings_form($form_state) {
     $form['account'] = array(
         '#type' => 'fieldset',
@@ -95,6 +98,9 @@ function easyrec_admin_settings_form($form_state) {
     return system_settings_form($form);
 }
 
+/**
+ *  Trim the input values to avoid copy paste mistakes
+ */
 function easyrec_admin_settings_form_validate($form, &$form_state) {
     // Trim some text values.
     form_set_value($form['account']['easyrec_apiKey'], trim($form_state['values']['easyrec_apiKey']), $form_state);
