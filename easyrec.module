@@ -127,12 +127,12 @@ function easyrec_block_info() {
         'cache' => DRUPAL_NO_CACHE
     );
 
-    $blocks['mostViewedItems']['info'] = array(
+    $blocks['mostViewedItems'] = array(
         'info' => t('easyrec: most viewed items'),
         'cache' => DRUPAL_NO_CACHE
     );
 
-    $blocks['mostBoughtItems']['info'] = array(
+    $blocks['mostBoughtItems'] = array(
         'info' => t('easyrec: most bought items'),
         'cache' => DRUPAL_NO_CACHE
     );
