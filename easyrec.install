@@ -54,7 +54,7 @@ function easyrec_requirements($phase) {
         if (!preg_match('/^[0-9a-zA-Z]+$/', variable_get('easyrec_apiKey', ''))) {
             $requirements['easyrec'] = array(
                 'title' => $t('easyrec module'),
-                'description' => $t('easyrec module has not been configured yet. Please configure its settings from the <a href="@url">easyrec settings page</a>.', array('@url' => url('admin/config/system/easyrec'))),
+                'description' => $t('easyrec module has not been configured yet. Please configure its settings from the <a href="@url">easyrec settings page</a>.', array('@url' => url('admin/config/services/easyrec'))),
                 'severity' => REQUIREMENT_ERROR,
                 'value' => $t('Not configured'),
             );
