@@ -13,7 +13,8 @@
 /**
  * Implements hook_help().
  */
-function easyrec_help($path, $arg) {
+function easyrec_help($path, $arg)
+{
     switch ($path) {
         case 'admin/config/services/easyrec':
             return t('<a href="@easyrec_url">easyrec</a> is a free (registration required) recommender service. Configure the required parameters to get started.', array('@easyrec_url' => 'http://easyrec.org/'));
@@ -23,7 +24,8 @@ function easyrec_help($path, $arg) {
 /**
  * Implements hook_permission().
  */
-function easyrec_permission() {
+function easyrec_permission()
+{
     return array(
         'administer easyrec' => array(
             'title' => t('Administer easyrec'),
@@ -36,7 +38,8 @@ function easyrec_permission() {
 /**
  * Implements hook_menu().
  */
-function easyrec_menu() {
+function easyrec_menu()
+{
     $items['admin/config/services/easyrec'] = array(
         'title' => 'easyrec',
         'description' => 'Configure easyrec settings.',
@@ -53,11 +56,12 @@ function easyrec_menu() {
 /**
  * Implements hook_page_alter(). to insert JavaScript to the appropriate scope/region of the page.
  */
-function easyrec_page_alter(&$page) {
+function easyrec_page_alter(&$page)
+{
     global $user;
     $apiKey = variable_get('easyrec_apiKey', '');
     if (!empty($apiKey)) {
-        $page['footer']['easyrec']['#attached']['js'][variable_get('easyrec_url', '') . '/api-js/easyrec.js'] = array('scope' => 'header');
+        drupal_add_js(variable_get('easyrec_url', '') . '/api-js/easyrec.js');
         $script = 'var apiKey      = "' . $apiKey . '";';
         $script .= 'var tenantId    = "' . variable_get('easyrec_tenantId', '') . '";';
 
@@ -72,17 +76,17 @@ function easyrec_page_alter(&$page) {
 
                 $path = isset($_GET['q']) ? $_GET['q'] : '<front>';
                 $link = url($path, array('absolute' => TRUE));
-
                 $imagePath = "";
-                if ($node->uc_product_image['und'][0]['filename'] != "") {
+
+                if (count($node->uc_product_image) != 0 && $node->uc_product_image['und'][0]['filename'] != "") {
                     $imagePath = "/sites/default/files/" . $node->uc_product_image['und'][0]['filename'];
                 }
 
                 $script .= 'easyrec_sendAction("view",{userId:' . $userId . ',' .
                            'itemId:"' . $node->nid . '",' .
                            'itemUrl:"' . $link . '",' .
-                           'itemDescription:"' . $node->title . '",' .
-                           'itemImageUrl:"' . $imagePath . '"});';
+                           'itemImageUrl:"' . $imagePath . '",' .
+                           'itemDescription:"' . $node->title . '"});';
             }
         }
 
@@ -99,11 +103,7 @@ function easyrec_page_alter(&$page) {
 
         $script .= variable_get('easyrec_drawDrupalCustom', '');
 
-        $page['footer']['easyrec']['#attached']['js'][$script] = array(
-            'type' => 'inline',
-            'scope' => 'header',
-        );
-
+        drupal_add_js($script, array('scope' => 'header', 'type' => 'inline'));
     }
 }
 
@@ -111,7 +111,8 @@ function easyrec_page_alter(&$page) {
 /**
  * Implements hook_block_info().
  */
-function easyrec_block_info() {
+function easyrec_block_info()
+{
     $blocks['otherUsersAlsoViewed'] = array(
         'info' => t('easyrec: other users also viewed'),
         'cache' => DRUPAL_NO_CACHE
@@ -143,7 +144,8 @@ function easyrec_block_info() {
 /**
  * Implements hook_block_configure().
  */
-function easyrec_block_configure($delta = '') {
+function easyrec_block_configure($delta = '')
+{
 
     $form['blockconfig'] = array(
         '#type' => 'fieldset',
@@ -160,7 +162,8 @@ function easyrec_block_configure($delta = '') {
     );
 
     if ($delta == "otherUsersAlsoViewed" ||
-        $delta == "otherUsersAlsoBought") {
+        $delta == "otherUsersAlsoBought"
+    ) {
 
         $form['blockconfig']['easyrec_block_' . $delta . '_filterUser'] = array(
             '#type' => 'checkbox',
@@ -197,11 +200,13 @@ function easyrec_block_configure($delta = '') {
 /**
  * Implements hook_block_save().
  */
-function easyrec_block_save($delta = '', $edit = array()) {
+function easyrec_block_save($delta = '', $edit = array())
+{
     variable_set('easyrec_block_' . $delta . '_drawingCallback', $edit['easyrec_block_' . $delta . '_drawingCallback']);
 
     if ($delta == "otherUsersAlsoViewed" ||
-        $delta == "otherUsersAlsoBought") {
+        $delta == "otherUsersAlsoBought"
+    ) {
         variable_set('easyrec_block_' . $delta . '_filterUser', $edit['easyrec_block_' . $delta . '_filterUser']);
     }
     else {
@@ -214,13 +219,15 @@ function easyrec_block_save($delta = '', $edit = array()) {
 /**
  * Implements hook_block_view().
  */
-function easyrec_block_view($delta = '') {
+function easyrec_block_view($delta = '')
+{
     global $user;
     $drawingCallbackFunction = variable_get('easyrec_block_' . $delta . '_drawingCallback', 'drawRecommendationCarusel');
 
     if ($delta == "otherUsersAlsoViewed" ||
         $delta == "otherUsersAlsoBought" ||
-        $delta == "recommendationsForUser") {
+        $delta == "recommendationsForUser"
+    ) {
 
         if ($node = menu_get_object()) {
 
@@ -269,7 +276,8 @@ function easyrec_block_view($delta = '') {
 /**
  * Implements hook_uc_order().
  */
-function easyrec_uc_order($op, &$order, $arg2) {
+function easyrec_uc_order($op, &$order, $arg2)
+{
     // If a new order is created during the checkout process...
     if ($op == 'new' && arg(0) == 'cart') {
         // Store the order ID for later use.
@@ -284,7 +292,8 @@ function easyrec_uc_order($op, &$order, $arg2) {
  * @return
  *   TRUE or FALSE indicating whether or not to display the easyrec JS.
  */
-function _easyrec_display() {
+function _easyrec_display()
+{
     // Display the easyrec JS if the URL is complete...
     if (arg(2) == 'complete') {
         return TRUE;
@@ -307,7 +316,8 @@ function _easyrec_display() {
  * @return
  *   String containing a Drawback alias.
  */
-function _easyrec_generate_unique_callback($drawingCallbackFunction, $delta) {
+function _easyrec_generate_unique_callback($drawingCallbackFunction, $delta)
+{
     $returnString = "function easyrec_" . $drawingCallbackFunction . "_" . $delta . "(json){" .
                     "if (json.recommendeditems!=null){" .
                     $drawingCallbackFunction . "ToDiv(json,'recommender_" . $delta . "');" .
@@ -327,7 +337,8 @@ function _easyrec_generate_unique_callback($drawingCallbackFunction, $delta) {
  * @return
  *   the easyrec javascript which sends a buy action.
  */
-function _easyrec_create_buy_actions($order) {
+function _easyrec_create_buy_actions($order)
+{
     $script = '';
     foreach ($order->products as $product) {
         for ($i = 1; $i <= $product->qty; $i++) {
