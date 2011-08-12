@@ -142,10 +142,18 @@ function easyrec_block_info()
 }
 
 /**
+ * Implements easyrec_get_drawing_callback_name().
+ */
+function easyrec_easyrec_get_drawing_callback_name(){
+   return array('drawRecommendationList', 'drawRecommendationListWithPictures', 'drawDrupalCustom');
+}
+
+/**
  * Implements hook_block_configure().
  */
 function easyrec_block_configure($delta = '')
 {
+    $callbacks  = module_invoke_all('easyrec_get_drawing_callback_name');
 
     $form['blockconfig'] = array(
         '#type' => 'fieldset',
@@ -156,8 +164,8 @@ function easyrec_block_configure($delta = '')
     $form['blockconfig']['easyrec_block_' . $delta . '_drawingCallback'] = array(
         '#type' => 'select',
         '#title' => t('Drawing Callback'),
-        '#default_value' => variable_get('easyrec_block_' . $delta . '_drawingCallback', 'drawRecommendationCarusel'),
-        '#options' => drupal_map_assoc(array('drawRecommendationList', 'drawRecommendationListWithPictures', 'drawRecommendationCarusel', 'drawDrupalCustom')),
+        '#default_value' => variable_get('easyrec_block_' . $delta . '_drawingCallback', 'drawRecommendationList'),
+        '#options' => drupal_map_assoc($callbacks),
         '#description' => t('Select which javascript method should render the JSON request. You can define the "drawDrupalCustom" in <a href="@settings">the settings</a>.', array('@settings' => '/admin/config/services/easyrec'))
     );
 
@@ -222,7 +230,7 @@ function easyrec_block_save($delta = '', $edit = array())
 function easyrec_block_view($delta = '')
 {
     global $user;
-    $drawingCallbackFunction = variable_get('easyrec_block_' . $delta . '_drawingCallback', 'drawRecommendationCarusel');
+    $drawingCallbackFunction = variable_get('easyrec_block_' . $delta . '_drawingCallback', 'drawRecommendationList');
 
     if ($delta == "otherUsersAlsoViewed" ||
         $delta == "otherUsersAlsoBought" ||
