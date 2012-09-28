@@ -1,5 +1,4 @@
-// $Id: easyrec.info,v 0.95 2010/10/09 21:46:12 hass Exp $
-name = "Easyrec"
+name = "easyrec"
 description = Allows your site to display recommendations.
 package = Recommendation
 dependencies[] = uc_order
