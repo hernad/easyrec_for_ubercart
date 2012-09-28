@@ -1,0 +1,6 @@
+name = "easyrec views callback"
+description = Allows to display recommendations in the form of a carousel.
+core = 7.x
+package = Recommendation
+dependencies[] = views
+
