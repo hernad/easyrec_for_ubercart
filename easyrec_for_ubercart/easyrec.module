@@ -330,7 +330,7 @@ function _easyrec_generate_unique_callback($drawingCallbackFunction, $delta)
                     "if (json.recommendeditems!=null){" .
                     $drawingCallbackFunction . "ToDiv(json,'recommender_" . $delta . "');" .
                     "}else{" .
-                    "document.getElementById('block-easyrec-" . strtolower($delta) . "').style.display='none';" .
+                    "document.getElementById('block-easyrec-" .  strtolower($delta) . "').style.display='none';" .
                     "}" .
                     "}";
 

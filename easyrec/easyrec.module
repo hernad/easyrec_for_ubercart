@@ -81,8 +81,8 @@ function easyrec_init() {
     }
 
     $script .= variable_get('easyrec_drawDrupalCustom', ''); 
+    drupal_add_js(drupal_get_path('module', 'easyrec')  . '/easyrec.js', 'file',  'header');
     drupal_add_js($script, 'inline', 'header');
-    drupal_add_js(drupal_get_path('module', 'easyrec')  . '/easyrec.js', 'file',  'header'); 
   }
 }
 
@@ -289,7 +289,7 @@ function _easyrec_generate_unique_callback($drawingCallbackFunction, $delta) {
                             "if(json.recommendeditems!=null){".
                                   $drawingCallbackFunction . "ToDiv(json,'recommender_" . $delta . "');" .   
                             "}else{" . 
-                                "document.getElementById('block-easyrec-" . $delta . "').style.display='none';" . 
+                                "document.getElementById('block-easyrec-" . strtolower($delta) . "').style.display='none';" . 
                             "}" . 
                     "}";
 
