@@ -113,6 +113,8 @@ function easyrec_block_info() {
   $blocks['otherUsersAlsoBought']['info'] = t('easyrec: other users also bought');    
   $blocks['recommendationsForUser']['info'] = t('easyrec: recommendations for user');    
 
+
+  
   $blocks['mostViewedItems']['info'] = t('easyrec: most viewed items');    
   $blocks['mostBoughtItems']['info'] = t('easyrec: most bought items');  
 
@@ -211,13 +213,17 @@ function easyrec_block_view($delta = '') {
                         $userId = "'" . $user->uid . "'";
                     }
             
+			 
                     $blockContent = "<div id='recommender_" . $delta . "'> </div>";
                     $blockContent .= "<script>";
+					
                     $blockContent .=  _easyrec_generate_unique_callback($drawingCallbackFunction, $delta);
                     $blockContent .= "easyrec_getRecommendations('" . strtolower($delta) . "',{userId:" . $userId . "," . 
                                                        "itemId:'" . $node->nid . "'," . 
                                                       " drawingCallback:'easyrec_" . $drawingCallbackFunction . "_" . $delta . "'});";
-                    $blockContent .= "</script>";
+                    
+					$blockContent .= "debugger;";
+					$blockContent .= "</script>";
                       $block = array();
                       $block['subject'] = t('Recommendations');  
                     $block['content'] = $blockContent;
@@ -301,11 +307,25 @@ function _easyrec_create_buy_actions($order) {
   $script = '';
   foreach ($order->products as $product) {    
         for ($i = 1; $i <= $product->qty; $i++) {
-            $script .= 'easyrec_sendAction("buy",{userId:' . $order->uid . ',' . 
+			
+			if ($product->qty > 1) {
+				$script .= 'easyrec_sendAction("rate", {userId:' . $order->uid . ',' . 
+						           'itemId:"' . $product->nid . '",' . 
+						           'itemDescription:"' . $product->title . '",' .                                      
+						           'itemUrl:"",' . 
+								   'ratingValue:"' . ($product->qty - 1) . '",'  .	   
+					               'itemImageUrl:""});'; 
+				$script .= 'console.log("rate");';
+			}   
+			
+			$script .= 'easyrec_sendAction("buy",{userId:' . $order->uid . ',' . 
                                      'itemId:"' . $product->nid . '",' . 
                                      'itemDescription:"' . $product->title . '",' .                                      
                                      'itemUrl:"",' . 
-                                     'itemImageUrl:""});';                                     
+                                     'itemImageUrl:""});';  
+			$script .= 'console.log("buy");';
+			
+			                                
         }
   }  
 
